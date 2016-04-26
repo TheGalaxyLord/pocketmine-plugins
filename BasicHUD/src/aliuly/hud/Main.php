@@ -46,7 +46,7 @@ abstract class StrtrFormat implements Formatter {
 	}
 }
 
-class PopupTask extends PluginTask{
+class TipTask extends PluginTask{
 	public function __construct(Main $plugin){
 		parent::__construct($plugin);
 	}
@@ -62,7 +62,7 @@ class PopupTask extends PluginTask{
 		foreach ($plugin->getServer()->getOnlinePlayers() as $pl) {
 			if (!$pl->hasPermission("basichud.user")) continue;
 			$msg = $plugin->getMessage($pl);
-			if ($msg !== null) $pl->sendPopup($msg);
+			if ($msg !== null) $pl->sendTip($msg);
 		}
 	}
 
@@ -73,7 +73,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 	protected $_getVars;			// Customize variables
 
 	protected $format;				// HUD format
-	protected $sendPopup;			// Message to popup through API
+	protected $sendTip;			// Message to tip through API
 	protected $disabled;			// HUD disabled by command
 	protected $perms;					// Attachable permissions
 	protected $consts;				// These are constant variables...
@@ -165,11 +165,11 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 
 	public function defaultGetMessage($player) {
 		$n = strtolower($player->getName());
-		if (isset($this->sendPopup[$n])) {
-			// An API user wants to post a Popup...
-			list($msg,$timer) = $this->sendPopup[$n];
+		if (isset($this->sendTip[$n])) {
+			// An API user wants to post a Tip...
+			list($msg,$timer) = $this->sendTip[$n];
 			if (microtime(true) < $timer) return $msg;
-			unset($this->sendPopup[$n]);
+			unset($this->sendTip[$n]);
 		}
 		if (isset($this->disabled[$n])) return null;
 
@@ -197,7 +197,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 
 	public function onEnable(){
 		$this->disabled = [];
-		$this->sendPopup = [];
+		$this->sendTip = [];
 		$this->perms = [];
 
 		if (!is_dir($this->getDataFolder())) mkdir($this->getDataFolder());
@@ -243,7 +243,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 
 		$defaults = [
 			"version" => $this->getDescription()->getVersion(),
-			"# ticks" => "How often to refresh the popup",
+			"# ticks" => "How often to refresh the tip",
 			"ticks" => 10,
 			"# format" => "Display format",
 			"format" => "{GREEN}{BasicHUD} {WHITE}{world} ({x},{y},{z}) {bearing}",
@@ -299,7 +299,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 			throw new \RunTimeException("Error loading custom code!");
 			return;
 		}
-		$this->getServer()->getScheduler()->scheduleRepeatingTask(new PopupTask($this), $cf["ticks"]);
+		$this->getServer()->getScheduler()->scheduleRepeatingTask(new TipTask($this), $cf["ticks"]);
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 	}
 
@@ -320,7 +320,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 	public function onQuit(PlayerQuitEvent $ev) {
 		$n = strtolower($ev->getPlayer()->getName());
 		if (isset($this->perms_cache[$n])) unset($this->perms_cache[$n]);
-		if (isset($this->sendPopup[$n])) unset($this->sendPopup[$n]);
+		if (isset($this->sendTip[$n])) unset($this->sendTip[$n]);
 		if (isset($this->disabled[$n])) unset($this->disabled[$n]);
 		if (isset($this->perms[$n])) {
 			$attach = $this->perms[$n];
@@ -330,7 +330,7 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 	}
 	public function onItemHeld(PlayerItemHeldEvent $ev){
 		if ($ev->getItem()->getId() == Item::AIR) return;
-		$this->sendPopup($ev->getPlayer(),ItemName::str($ev->getItem()),2);
+		$this->sendTip($ev->getPlayer(),ItemName::str($ev->getItem()),2);
 	}
 
 	public function onCommand(CommandSender $sender, Command $cmd, $label, array $args) {
@@ -399,14 +399,14 @@ class Main extends PluginBase implements Listener,CommandExecutor {
 	/**
 	 * @API
 	 */
-	public function sendPopup($player,$msg,$length=3) {
+	public function sendTip($player,$msg,$length=3) {
 		if ($this->isEnabled()) {
 			if ($player->hasPermission("basichud.user")) {
 				$n = strtolower($player->getName());
-				$this->sendPopup[$n] = [ $msg, microtime(true)+$length ];
+				$this->sendTip[$n] = [ $msg, microtime(true)+$length ];
 				$msg = $this->getMessage($player);
 			}
 		}
-		if ($msg !== null) $player->sendPopup($msg);
+		if ($msg !== null) $player->sendTip($msg);
 	}
 }
